@@ -277,7 +277,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "E:\\Allan\\Kuliah\\Kuliah Sem 3\\Integrasi Sistem\\Golden Tiket\\kost-agent\\apps\\kost-agent\\src\\generated\\client",
+      "value": "E:\\Allan\\Kuliah\\Kuliah Sem 3\\Integrasi Sistem\\Golden Tiket\\kost-agent\\src\\generated\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -291,7 +291,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "E:\\Allan\\Kuliah\\Kuliah Sem 3\\Integrasi Sistem\\Golden Tiket\\kost-agent\\apps\\kost-agent\\prisma\\schema.prisma",
+    "sourceFilePath": "E:\\Allan\\Kuliah\\Kuliah Sem 3\\Integrasi Sistem\\Golden Tiket\\kost-agent\\prisma\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

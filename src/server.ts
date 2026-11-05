@@ -70,7 +70,7 @@ if (!process.env.VERCEL) {
   }, 30000);
 }
 
-export const server = !process.env.VERCEL
+export const server = (!process.env.VERCEL || Boolean(process.env.PORT))
   ? app.listen(PORT, () => {
       console.log(`[KostAgent] Server running on port ${PORT}`);
     })
