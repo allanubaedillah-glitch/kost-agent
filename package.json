@@ -1,0 +1,19 @@
+{
+  "name": "kost-agent-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "ka:frontend": "npm --prefix apps/kost-agent/frontend run dev",
+    "ka:build": "npm --prefix apps/kost-agent/frontend run build",
+    "km:frontend": "npm --prefix apps/kost-management/frontend run dev",
+    "km:build": "npm --prefix apps/kost-management/frontend run build",
+    "km:dev": "npm --workspace=apps/kost-management run dev",
+    "ka:dev": "npm --workspace=apps/kost-agent run dev",
+    "seed": "npx tsx apps/kost-management/src/seed.ts && npx tsx apps/kost-agent/src/seed.ts",
+    "test:e2e": "npx tsx scripts/test-integration.ts",
+    "build:all": "npm run ka:build && npm run km:build && npm --prefix apps/kost-agent run build && npm --prefix apps/kost-management run build"
+  }
+}
