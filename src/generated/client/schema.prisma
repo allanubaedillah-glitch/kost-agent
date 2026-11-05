@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Customer {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String
+  fullName          String
+  phoneNumber       String
+  isVerified        Boolean   @default(false)
+  verificationToken String?
+  avatarUrl         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  bookings          Booking[]
+  reviews           Review[]
+
+  @@map("customers")
+}
+
+model AdminUser {
+  id           String             @id @default(uuid())
+  email        String             @unique
+  passwordHash String
+  fullName     String
+  role         String             @default("ADMIN") // ADMIN, SUPERADMIN
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  auditLogs    SecurityAuditLog[]
+
+  @@map("admin_users")
+}
+
+model PartnerProperty {
+  id                   String        @id @default(uuid())
+  kmPropertyId         String        @unique // External Reference ID di Kost Management
+  ownerName            String
+  ownerPhone           String
+  ownerWhatsapp        String
+  name                 String
+  slug                 String        @unique
+  address              String
+  city                 String
+  district             String
+  latitude             Float?
+  longitude            Float?
+  description          String?
+  genderType           String        @default("MIXED")
+  generalFacilities    String // JSON Array: ["Wi-Fi", "Parkir Mobil"]
+  photos               String // JSON Array: URLs
+  termsAndRules        String?
+  requirementsSchema   String // JSON: standard_presets, custom_checkboxes, notes (ADR-009)
+  paymentBankName      String
+  paymentAccountNumber String
+  paymentAccountHolder String
+  paymentQrisUrl       String?
+  partnershipStatus    String        @default("WAITING_REVIEW") // WAITING_REVIEW, ACTIVE, REJECTED, SUSPENDED, EXPIRED
+  rejectionReason      String?
+  avgRating            Float         @default(0.0)
+  totalReviews         Int           @default(0)
+  lastSyncedAt         DateTime? // ADR-005
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  rooms                PartnerRoom[]
+  bookings             Booking[]
+  reviews              Review[]
+
+  @@index([city])
+  @@index([partnershipStatus])
+  @@map("partner_properties")
+}
+
+model PartnerRoom {
+  id                String          @id @default(uuid())
+  kmRoomId          String          @unique // External Reference ID di Kost Management
+  partnerPropertyId String
+  partnerProperty   PartnerProperty @relation(fields: [partnerPropertyId], references: [id], onDelete: Cascade)
+  roomNumber        String
+  roomType          String          @default("PRIVATE") // PRIVATE, SHARED
+  sizeSqm           Float?
+  facilities        String // JSON Array: ["AC", "Kamar Mandi Dalam"]
+  photos            String // JSON Array: URLs
+  monthlyPrice      Float // Tarif per slot per bulan (ADR-004)
+  totalCapacity     Int // Total slot/orang (ADR-010)
+  occupiedSlots     Int             @default(0)
+  reservedSlots     Int             @default(0)
+  status            String          @default("AVAILABLE") // AVAILABLE, MAINTENANCE
+  lastSyncedAt      DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  bookings          Booking[]
+
+  @@index([partnerPropertyId])
+  @@map("partner_rooms")
+}
+
+model Booking {
+  id                   String             @id @default(uuid())
+  bookingCode          String             @unique // Contoh: KA-202611-0089
+  customerId           String
+  customer             Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  partnerPropertyId    String
+  partnerProperty      PartnerProperty    @relation(fields: [partnerPropertyId], references: [id], onDelete: Cascade)
+  partnerRoomId        String
+  partnerRoom          PartnerRoom        @relation(fields: [partnerRoomId], references: [id], onDelete: Cascade)
+  slotsCount           Int
+  durationMonths       Int
+  startDate            DateTime
+  endDate              DateTime
+  pricePerSlot         Float
+  totalAmount          Float // ADR-004: pricePerSlot * slotsCount * durationMonths
+  occupantsData        String // JSON Array data seluruh penghuni
+  status               String             @default("PENDING_PAYMENT") // PENDING_PAYMENT, PAYMENT_SUBMITTED, ACCEPTED, REJECTED, CHECKED_IN, CHECK_IN_OVERDUE, CANCELLED, EXPIRED, COMPLETED
+  cancellationReason   String?
+  paymentDeadline      DateTime // T + 60 menit (ADR-000)
+  verificationDeadline DateTime? // T + 24 jam (ADR-003)
+  checkInDeadline      DateTime? // T + 14 hari (ADR-000)
+  isNeedsAttention     Boolean            @default(false) // ADR-003: Flag SLA Overdue >24 jam
+  idempotencyKey       String             @unique // ADR-000
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  paymentSubmission    PaymentSubmission?
+  refundRequest        RefundRequest?
+  review               Review?
+
+  @@index([customerId])
+  @@index([partnerPropertyId])
+  @@index([status])
+  @@index([isNeedsAttention])
+  @@map("bookings")
+}
+
+model PaymentSubmission {
+  id                  String   @id @default(uuid())
+  bookingId           String   @unique
+  booking             Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  transferReceiptUrl  String
+  senderBankName      String?
+  senderAccountHolder String?
+  submissionNotes     String?
+  submittedAt         DateTime @default(now())
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("payment_submissions")
+}
+
+model RefundRequest {
+  id               String    @id @default(uuid())
+  bookingId        String    @unique
+  booking          Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  bankName         String
+  accountNumber    String
+  accountHolder    String
+  refundAmount     Float
+  penaltyDeduction Float     @default(0.0)
+  status           String    @default("PENDING") // PENDING, COMPLETED
+  requestedAt      DateTime  @default(now())
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@map("refund_requests")
+}
+
+model Review {
+  id                String          @id @default(uuid())
+  bookingId         String          @unique // ADR-006: Maksimal 1 review per booking ID
+  booking           Booking         @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  customerId        String
+  customer          Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  partnerPropertyId String
+  partnerProperty   PartnerProperty @relation(fields: [partnerPropertyId], references: [id], onDelete: Cascade)
+  rating            Int // 1 sampai 5
+  reviewText        String
+  isPublished       Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([customerId])
+  @@index([partnerPropertyId])
+  @@map("reviews")
+}
+
+model SecurityAuditLog {
+  id           String    @id @default(uuid())
+  adminUserId  String
+  adminUser    AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  action       String // Contoh: 'VIEW_UNMASKED_CUSTOMER_ID'
+  resourceType String // 'BOOKING', 'CUSTOMER'
+  resourceId   String
+  reason       String
+  ipAddress    String
+  createdAt    DateTime  @default(now())
+
+  @@index([adminUserId])
+  @@map("security_audit_logs")
+}
